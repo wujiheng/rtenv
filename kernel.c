@@ -304,15 +304,6 @@ void queue_str_task(const char *str, int delay)
 	}
 }
 
-void queue_str_task1()
-{
-	queue_str_task("Hello 1\n", 200);
-}
-
-void queue_str_task2()
-{
-	queue_str_task("Hello 2\n", 50);
-}
 
 void serial_readwrite_task()
 {
@@ -366,8 +357,6 @@ void first()
 	if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
 	if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
 	if (!fork()) rs232_xmit_msg_task();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task1();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task2();
 	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
 
 	setpriority(0, PRIORITY_LIMIT);
