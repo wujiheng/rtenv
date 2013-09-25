@@ -304,6 +304,18 @@ void queue_str_task(const char *str, int delay)
 	}
 }
 
+void write_ch( char ch )
+{
+    int fdout = mq_open("/tmp/mqueue/out", 0);
+
+    char str_ch[2] = {'\0','\0'};
+    str_ch[0] = ch;
+
+    write(fdout, str_ch, 2);
+}
+
+
+
 
 void serial_readwrite_task()
 {
@@ -316,11 +328,11 @@ void serial_readwrite_task()
 	fdout = mq_open("/tmp/mqueue/out", 0);
 	fdin = open("/dev/tty0/in", 0);
 
-	/* Prepare the response message to be queued. */
-	memcpy(str, "Got:", 4);
+	memcpy(str, "Shell$", 6);
+    write(fdout, str, 6);
 
 	while (1) {
-		curr_char = 4;
+		curr_char = 6;
 		done = 0;
 		do {
 			/* Receive a byte from the RS232 port (this call will
@@ -332,20 +344,30 @@ void serial_readwrite_task()
 			 */
 			if (curr_char >= 98 || (ch == '\r') || (ch == '\n')) {
 				str[curr_char] = '\n';
-				str[curr_char+1] = '\0';
+				str[curr_char+1] = '\r';
+				str[curr_char+2] = '\0';
 				done = -1;
 				/* Otherwise, add the character to the
 				 * response string. */
 			}
+            else if ( ch == 0x7f ) {
+                if( curr_char > 6 ) {
+                    write(fdout, "\b \b", 3 );
+                    curr_char--;
+                }
+            }
 			else {
+                write_ch(ch);
 				str[curr_char++] = ch;
 			}
 		} while (!done);
 
-		/* Once we are done building the response string, queue the
-		 * response to be sent to the RS232 port.
-		 */
-		write(fdout, str, curr_char+1+1);
+        // find valid command
+
+
+        // Display new line of shell 
+        memcpy(str, "\n\rShell$", 8);
+        write(fdout, str, 8);
 	}
 }
 
