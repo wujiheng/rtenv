@@ -245,12 +245,8 @@ void serialin(USART_TypeDef* uart, unsigned int intr)
 
 void greeting()
 {
-	int fdout = open("/dev/tty0/out", 0);
-	char *string = "Hello, World!\n";
-	while (*string) {
-		write(fdout, string, 1);
-		string++;
-	}
+	char *string = "\n\rHello, World!\n";
+    write_str( string );
 }
 
 void echo()
@@ -308,13 +304,30 @@ void write_ch( char ch )
 {
     int fdout = mq_open("/tmp/mqueue/out", 0);
 
-    char str_ch[2] = {'\0','\0'};
-    str_ch[0] = ch;
+    char str_ch[2] = {'\0','\0'};       // initial 
+    str_ch[0] = ch;                     // copy ch to str_ch
 
     write(fdout, str_ch, 2);
 }
 
+void write_str( char *str )
+{
+    int fdout = mq_open("/tmp/mqueue/out", 0);
+    write( fdout, str, strlen(str)+1 );
+}
 
+
+void command( char *str )
+{
+    str+=6;  // to escape shells$
+
+    if( strcmp( str, "hello" ) == 0 )
+        greeting();
+    else {
+        if( strlen(str) != 0 ) 
+            write_str( "\n\rcommand not found" );
+    }
+}
 
 
 void serial_readwrite_task()
@@ -328,8 +341,9 @@ void serial_readwrite_task()
 	fdout = mq_open("/tmp/mqueue/out", 0);
 	fdin = open("/dev/tty0/in", 0);
 
-	memcpy(str, "Shell$", 6);
-    write(fdout, str, 6);
+    memcpy(str, "Shell$", 6);
+    //write(fdout, str, 6);
+    write_str( str );
 
 	while (1) {
 		curr_char = 6;
@@ -343,32 +357,28 @@ void serial_readwrite_task()
 			 * finish the string and inidcate we are done.
 			 */
 			if (curr_char >= 98 || (ch == '\r') || (ch == '\n')) {
-				str[curr_char] = '\n';
-				str[curr_char+1] = '\r';
-				str[curr_char+2] = '\0';
+				str[curr_char] = '\0';
 				done = -1;
-				/* Otherwise, add the character to the
-				 * response string. */
 			}
             else if ( ch == 0x7f ) {
                 if( curr_char > 6 ) {
-                    write(fdout, "\b \b", 3 );
+                    write_str( "\b \b" );
                     curr_char--;
                 }
             }
 			else {
                 write_ch(ch);
-				str[curr_char++] = ch;
+                str[curr_char++] = ch;
 			}
 		} while (!done);
 
         // find valid command
-
+        command( str );
 
         // Display new line of shell 
-        memcpy(str, "\n\rShell$", 8);
-        write(fdout, str, 8);
-	}
+        memcpy(str, "\n\rShell$", 9);
+        write_str( str );
+    }
 }
 
 void first()
@@ -848,3 +858,4 @@ int main()
 
 	return 0;
 }
+
