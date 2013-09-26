@@ -72,6 +72,7 @@ void puts(char *s)
 
 #define O_CREAT 4
 
+
 /* Stack struct of user thread, see "Exception entry and return" */
 struct user_thread_stack {
 	unsigned int r4;
@@ -243,11 +244,37 @@ void serialin(USART_TypeDef* uart, unsigned int intr)
 	}
 }
 
+
+
+#define COLOR_R "\033[0;31m"
+#define COLOR_G "\033[0;32m"
+#define DEFAULT_C "\033[0m"
+
+
 void greeting()
 {
-	char *string = "\n\rHello, World!\n";
-    write_str( string );
+    write_str( "\n\r" );
+    write_str( COLOR_R );
+	write_str( "Hello, World!\n" );
+    write_str( DEFAULT_C ); // recover original color
 }
+
+
+void help()
+{
+    write_str( "\n\r" );
+    write_str( COLOR_G );
+
+    write_str( "List of commands:\n" );
+    write_str( "\r\thello\t- show a welcom message with colors.\n" );
+    write_str( "\r\techo\t- show a message you entered.\n" );
+    write_str( "\r\tps\t- show all running task.\n" );
+    write_str( "\r\thelp\t- show the list of commands.\n" );
+
+    write_str( DEFAULT_C ); // recover original color
+}
+
+
 
 void echo()
 {
@@ -323,9 +350,14 @@ void command( char *str )
 
     if( strcmp( str, "hello" ) == 0 )
         greeting();
+    else if( strcmp( str, "help" ) == 0 )
+        help(); 
     else {
-        if( strlen(str) != 0 ) 
-            write_str( "\n\rcommand not found" );
+        if( strlen(str) != 0 ) { 
+            write_str( COLOR_R );
+            write_str( "\n\rCommand not found" );
+            write_str( DEFAULT_C );
+        }
     }
 }
 
