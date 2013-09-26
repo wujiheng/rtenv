@@ -106,6 +106,12 @@ struct task_control_block {
     struct task_control_block  *next;
 };
 
+// I can't find the solution to avoid using global variables!!!
+struct task_control_block tasks[TASK_LIMIT];
+size_t task_count = 0;
+
+
+
 /* 
  * pathserver assumes that all files are FIFOs that were registered
  * with mkfifo.  It also assumes a global tables of FDs shared by all
@@ -248,6 +254,7 @@ void serialin(USART_TypeDef* uart, unsigned int intr)
 
 #define COLOR_R "\033[0;31m"
 #define COLOR_G "\033[0;32m"
+#define COLOR_B "\033[0;34m"
 #define DEFAULT_C "\033[0m"
 
 
@@ -343,6 +350,65 @@ void write_str( char *str )
     write( fdout, str, strlen(str)+1 );
 }
 
+char* itoa( int value ) 
+{
+    char str[32] = {0};
+
+    int now = 30;
+    do {
+        str[now--] = "0123456789"[value%10];
+        value /= 10;
+    } while( value && now );
+
+    return &str[now+1];
+}
+
+char * task_status( int status )
+{
+    switch( status ) {
+        case TASK_READY: 
+                return "\tTASK_READY"; 
+
+        case TASK_WAIT_READ:
+                return "\tTASK_WAIT_READ";
+
+        case TASK_WAIT_WRITE:
+                return "\tTASK_WAIT_WRITE";
+
+        case TASK_WAIT_INTR:
+                return "\tTASK_WAIT_INTR";
+
+        case TASK_WAIT_TIME:
+                return "\tTASK_WAIT_TIME";
+
+        default:
+            return "Error Status";
+    };
+}
+
+
+void ps()
+{
+    int i;
+
+    write_str( COLOR_G );
+    write_str( "\n\rThere are total " );
+    write_str( itoa( task_count ) );
+    write_str( " task(s) in running!!\n" );
+    write_str( DEFAULT_C );
+
+    write_str( "\rPID\tStatus\tPriority\n\r" );
+
+    for( i = 0; i < task_count; i++ ) {
+        write_str( itoa(tasks[i].pid) );
+        write_str( task_status(tasks[i].status) );
+        write_str( "\t" );
+        write_str( itoa(tasks[i].priority) );
+        write_str( "\n\r" );
+    }
+
+}
+
 
 void command( char *str )
 {
@@ -350,6 +416,8 @@ void command( char *str )
 
     if( strcmp( str, "hello" ) == 0 )
         greeting();
+    else if( strcmp( str, "ps" ) == 0 )
+        ps();
     else if( strcmp( str, "help" ) == 0 )
         help(); 
     else {
@@ -722,11 +790,11 @@ _mknod(struct pipe_ringbuffer *pipe, int dev)
 int main()
 {
 	unsigned int stacks[TASK_LIMIT][STACK_SIZE];
-	struct task_control_block tasks[TASK_LIMIT];
+	//struct task_control_block tasks[TASK_LIMIT];
 	struct pipe_ringbuffer pipes[PIPE_LIMIT];
 	struct task_control_block *ready_list[PRIORITY_LIMIT + 1];  /* [0 ... 39] */
 	struct task_control_block *wait_list = NULL;
-	size_t task_count = 0;
+	//size_t task_count = 0;
 	size_t current_task = 0;
 	size_t i;
 	struct task_control_block *task;
