@@ -24,14 +24,21 @@ int strcmp(const char *a, const char *b)
 	);
 }
 
+
+//this code is reference from the c library
 int strncmp(const char *a, const char *b, size_t n)
 {
-    while( *a && *b && n-- && *a==*b) {
-        a++;
-        b++;
-    }
+    if ( n == 0 )
+        return 0;
 
-    return *a-*b;
+    do {
+        if( *a != *b++ )
+            return *a - *--b;
+        if( *a++ == 0 )
+            break;
+    } while( --n != 0 );
+
+    return 0;
 }
 
 
@@ -295,17 +302,38 @@ void help()
 
 
 
-void echo()
+void echo( char *str )
 {
-	int fdout, fdin;
-	char c;
-	fdout = open("/dev/tty0/out", 0);
-	fdin = open("/dev/tty0/in", 0);
+    str += 5;       // escape "echo "
+    write_str( "\n\r" );
+    write_str( COLOR_R );
 
-	while (1) {
-		read(fdin, &c, 1);
-		write(fdout, &c, 1);
-	}
+    int type;  // 0->Nothing, 1->Error on '\'', 2-> Error on '\"', 3-> Esacap front and tail
+    int end = strlen(str)-1;
+
+    if( (str[0] == '\'' || str[end] == '\'') &&  str[0] != str[end] ) 
+        type = 1;
+    else if( (str[0] == '\"' || str[end] == '\"') &&  str[0] != str[end] ) 
+        type = 2;
+    else if( str[0] == '\'' || str[0] == '\"' ) 
+        type = 3;
+    else
+        type = 0;
+
+    if( type == 1 )
+        write_str( "Unmatched \'." );
+    else if( type == 2 ) 
+        write_str( "Unmatched \"." );
+    else if( type == 3 ) {
+        char buf[100] = {0};
+        str++;  // escape front '\'' or '\"'
+        memcpy( buf, str, strlen(str)-1 );
+        write_str( buf );
+    }
+    else 
+        write_str( str );
+
+    write_str( DEFAULT_C );
 }
 
 void rs232_xmit_msg_task()
@@ -489,6 +517,11 @@ void command( char *str )
     else if ( strcmp( str, "history" ) == 0 ) {
         History( NULL, 1 );
         History( str, 0 );
+    }
+    else if ( strncmp( str, "echo ", 5 ) == 0 ) {
+        echo( str );
+        History( str, 0 );
+        memcpy( str, "\0", 1 );
     }
     else {
         if( strlen(str) != 0 ) { 
