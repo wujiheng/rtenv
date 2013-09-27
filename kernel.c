@@ -24,6 +24,17 @@ int strcmp(const char *a, const char *b)
 	);
 }
 
+int strncmp(const char *a, const char *b, size_t n)
+{
+    while( *a && *b && n-- && *a==*b) {
+        a++;
+        b++;
+    }
+
+    return *a-*b;
+}
+
+
 size_t strlen(const char *s) __attribute__ ((naked));
 size_t strlen(const char *s)
 {
@@ -277,6 +288,7 @@ void help()
     write_str( "\r\techo\t- show a message you entered.\n" );
     write_str( "\r\tps\t- show all running task.\n" );
     write_str( "\r\thelp\t- show the list of commands.\n" );
+    write_str( "\r\thistory- show the command histoy.\n" );
 
     write_str( DEFAULT_C ); // recover original color
 }
@@ -410,20 +422,80 @@ void ps()
 }
 
 
+/// Display or add command line histoy, ctl->0 for add, ctl->1 for display
+#define MAX_HISTORY 5
+void History( char* cmd, int ctl )
+{
+    static char history[MAX_HISTORY][100] = {0};
+    static int front = 0;     // point to front of queue
+    static int tail = 0;    // point to tail of command histoy
+
+    if( ctl == 0 ) {    // Add to command histoy
+        memcpy( history[front], cmd, strlen(cmd) );
+        front = (front+1) % MAX_HISTORY;
+        if( tail == front )
+            tail = (tail+1) % MAX_HISTORY;
+    }                   // Display all command history
+    else if( ctl == 1 ) {
+        write_str( COLOR_G );
+        write_str( "\n\rCommand History(from new to old):" );
+
+        int now = front - 1;
+        if( now < 0 )   // special case for front = 0
+            now = MAX_HISTORY - 1;
+        for( ; now != tail; now-- ) {
+            write_str( "\n\r\t" );
+            write_str( history[now] );
+
+            if( now == 0 )
+                now = MAX_HISTORY;
+        }
+        write_str( "\n\r\t" );
+        write_str( history[tail] );
+
+        write_str( DEFAULT_C );
+    }
+    else {
+        write_str( "\n\rError control in History\n" );
+    }
+
+}
+
+
 void command( char *str )
 {
     str+=6;  // to escape shells$
 
-    if( strcmp( str, "hello" ) == 0 )
+    if( strcmp( str, "hello" ) == 0 ) {
         greeting();
-    else if( strcmp( str, "ps" ) == 0 )
+        History( str, 0 );
+    }
+    else if( strcmp( str, "ps" ) == 0 ) {
         ps();
-    else if( strcmp( str, "help" ) == 0 )
+        History( str, 0 );
+    }
+    else if( strcmp( str, "help" ) == 0 ) {
         help(); 
+        History( str, 0 );
+    }
+    /*else if( strcmp( str, "\033[A" ) == 0 )
+        write_str( "\n\rUP" );
+    else if( strcmp( str, "\033[B" ) == 0 )
+        write_str( "\n\rDOWN" );
+    else if( strcmp( str, "\033[C" ) == 0 )
+        write_str( "\n\rRIGHT" );
+    else if( strcmp( str, "\033[D" ) == 0 )
+        write_str( "\n\rLEFT" );*/
+    else if ( strcmp( str, "history" ) == 0 ) {
+        History( NULL, 1 );
+        History( str, 0 );
+    }
     else {
         if( strlen(str) != 0 ) { 
             write_str( COLOR_R );
-            write_str( "\n\rCommand not found" );
+            write_str( "\n\r" );
+            write_str( str );
+            write_str( " - Command not found" );
             write_str( DEFAULT_C );
         }
     }
