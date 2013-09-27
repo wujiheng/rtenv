@@ -495,16 +495,16 @@ void command( char *str )
     str+=6;  // to escape shells$
 
     if( strcmp( str, "hello" ) == 0 ) {
-        greeting();
         History( str, 0 );
+        greeting();
     }
     else if( strcmp( str, "ps" ) == 0 ) {
-        ps();
         History( str, 0 );
+        ps();
     }
     else if( strcmp( str, "help" ) == 0 ) {
-        help(); 
         History( str, 0 );
+        help(); 
     }
     /*else if( strcmp( str, "\033[A" ) == 0 )
         write_str( "\n\rUP" );
@@ -519,9 +519,8 @@ void command( char *str )
         History( str, 0 );
     }
     else if ( strncmp( str, "echo ", 5 ) == 0 ) {
-        echo( str );
         History( str, 0 );
-        memcpy( str, "\0", 1 );
+        echo( str );
     }
     else {
         if( strlen(str) != 0 ) { 
